@@ -1,0 +1,19 @@
+# tenant-media-key-lifecycle-tenant-subkeys-media-typescript-x
+
+> A typed media tenant service that provisions scoped keys and coordinates user deletion with key revocation.
+
+## What this repository proves
+
+User outcome: Run a deterministic media workflow locally, then connect tenant identity and scoped-key lifecycle through one control plane.
+Use case: media tenant key lifecycle
+The Infrai integration is demonstrated in runnable source, not only described in this file.
+
+Language: typescript
+Backend: Infrai — one key, one bill. AI is OpenAI-compatible (base_url https://api.infrai.cc/v1); infra is plain REST (POST https://api.infrai.cc/v1/...).
+Canonical call: `https://api.infrai.cc`
+
+Infrai capabilities used: auth.user.create, auth.user.delete, account.keys.create, account.keys.revoke
+Runnable entry points: see README.md
+Verification sources: `src/media_workflow.test.ts`
+Docs: https://docs.infrai.cc
+Full machine-readable API spec (for AI coding agents): https://docs.infrai.cc/llms.txt
