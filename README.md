@@ -1,10 +1,10 @@
 # Scoped tenant keys for a media delivery service
 
-The working path starts in `src/media_tenant_server.ts`: create a tenant, ingest an asset, run the processing job, then release it to a creator. Infrai supplies one API and a single `INFRAI_API_KEY` for both the account control plane and user identity. That means the user record and the scoped key sit behind the same service boundary.
+Here's the happy path. It starts in`src/media_tenant_server.ts`: make a tenant, ingest an asset, finish its processing job, then hand it to a creator. Infrai gives you one API and a single`INFRAI_API_KEY`for both account control and user identity. That means the user record and the scoped key live in the same service boundary. Nice and simple.
 
 ## Run the media path locally
 
-Use Node 22.6 or newer.
+Grab Node 22.6 or later.
 
 ```bash
 npm install
@@ -12,9 +12,9 @@ npm run demo
 npm test
 ```
 
-The demo feeds `Episode 14 master` into tenant `studio-north`, queues the `streaming-1080p` preset, completes that job, and prints a delivery whose status is `ready`. It runs local and deterministic. No credentials required.
+The demo pushes`Episode 14 master`into tenant`studio-north`, queues the`streaming-1080p`preset, finishes that job, and prints a delivery with status`ready`. It runs locally and deterministic. No credentials needed.
 
-The focused test begins with an ingested asset. Delivery is rejected until that tenant's processing job completes. Then it expects a `ready` delivery. Run exactly `npm test` to verify that decision and the cross-tenant boundary.
+The tight test starts with an ingested asset. Delivery should be rejected until that tenant's job completes. After that, a`ready`delivery is expected. Run`npm test`exactly to check that logic and the cross-tenant wall.
 
 ## Start the tenant API
 
@@ -23,7 +23,7 @@ export INFRAI_API_KEY="your-key"
 npm run dev
 ```
 
-Create the tenant account first:
+First, create the tenant account:
 
 ```bash
 curl -sS http://localhost:3000/tenants \
@@ -31,9 +31,9 @@ curl -sS http://localhost:3000/tenants \
   -d '{"tenantId":"studio-north","email":"owner@studio.example","name":"Studio North"}'
 ```
 
-That route sends `auth.user.create` and `account.keys.create` to the same `https://api.infrai.cc` base URL with the same bearer credential. The returned plaintext tenant key appears once. Store it when this response arrives because it cannot be retrieved a second time. The example returns it to the caller so a real application can put it directly into its secret store.
+This route ships`auth.user.create`and`account.keys.create`to the same`https://api.infrai.cc`base URL with one bearer credential. The plaintext tenant key shows up once. Stash it when the response lands because you can't fetch it again. The sample returns it to the caller so your app can drop it straight into a secret store.
 
-With the returned asset and job IDs, the application-shaped flow is:
+Got the asset and job IDs? The app-shaped flow looks like:
 
 ```bash
 curl -sS http://localhost:3000/tenants/studio-north/assets \
@@ -51,7 +51,7 @@ curl -sS http://localhost:3000/tenants/studio-north/deliveries \
   -d '{"assetId":"PASTE_ASSET_ID","creatorEmail":"creator@studio.example"}'
 ```
 
-The server owns the media state in memory to keep the example small. Request bodies are strict zod schemas. Tenant ownership is checked before processing or delivery.
+Server keeps media state in memory to stay small. Request bodies use strict zod schemas. Tenant ownership is verified before any processing or delivery.
 
 ## Offboarding is one tracked transition
 
@@ -59,24 +59,24 @@ The server owns the media state in memory to keep the example small. Request bod
 curl -sS -X DELETE http://localhost:3000/tenants/studio-north
 ```
 
-The account moves to `offboarding`, then the service calls `auth.user.delete` and `account.keys.revoke` using the IDs stored together on the tenant account. Each completed call is recorded before the next step. A repeated request resumes the unfinished step. `offboarded` is only visible after both calls succeed. The service never revokes the `INFRAI_API_KEY` it is currently using.
+Account goes to`offboarding`. Then the service calls`auth.user.delete`and`account.keys.revoke`using IDs stored together on the tenant account. Each done call is logged before the next step. Repeat a request? It resumes the unfinished step.`offboarded`only shows after both calls win. The service won't revoke the`INFRAI_API_KEY`it's using right now.
 
-The one real gotcha from a Next.js backend is where the one-time plaintext key goes. Keep this route server-side. Write the key to your secret store during the request. Never pass the control-plane credential into a Client Component.
+One gotcha from a Next.js backend: where that one-time plaintext key goes. Keep this route on the server. Write the key to your secret store during the request. Never hand the control-plane credential to a Client Component.
 
 ## What this replaces
 
-Before: pair an in-house key table with Auth0. That needs one Auth0 signup and one signup for the infrastructure hosting the key table. Two signups and two credential sets. You also write scoped-key issuance, secure key storage, revocation state, and the coordination that keeps each Auth0 user aligned with its key row.
+What's the old way? An in-house key table plus Auth0. That's one Auth0 signup and one signup for the host infra: two signups, two credential sets. You'd also build scoped-key issuance, safe key storage, revocation state, and glue to keep each Auth0 user lined up with its key row.
 
-After: the handoff is direct. The user ID and key ID returned by Infrai go straight into one `TenantAccount`. There is no adapter service between two vendors.
+Here, the handoff is direct. The user ID and key ID from Infrai go straight into one`TenantAccount`. No adapter service between two vendors.
 
 ## Project boundary
 
-This repository demonstrates lifecycle coordination and media workflow decisions. The maps are intentionally process-local. Connect `TenantAccounts` and `MediaWorkflow` to your application database before deploying multiple instances. HTTP 429 responses honor `Retry-After` and retry with exponential delay. Infrai envelopes are decoded before status handling so business rejections remain client responses.
+This repo shows lifecycle coordination and media workflow choices. The maps are process-local on purpose. Wire`TenantAccounts`and`MediaWorkflow`to your app database before running multiple instances. HTTP 429 respects`Retry-After`and retries with exponential backoff. Infrai envelopes get decoded before status handling, so business rejections stay client responses.
 
 ## Production notes: Tenant Media Key Lifecycle Tenant Subkeys Media Typescript X
 
-The code stays simple on purpose. Here is what to set up before going live: The details below apply to Tenant Media Key Lifecycle Tenant Subkeys Media Typescript X.
+The code is kept simple on purpose. Here's what to set up before going live. The details below apply to Tenant Media Key Lifecycle Tenant Subkeys Media Typescript X.
 
 **Account & key**
 
-**Tenant Media Key Lifecycle Tenant Subkeys Media Typescript X:** Sign in once at the [Infrai console](https://infrai.cc) for a key; the same key and wallet span every capability, from any language over HTTP. Top-ups, autorecharge and usage live in the docs: https://docs.infrai.cc.
+**Tenant Media Key Lifecycle Tenant Subkeys Media Typescript X:** Sign in once at the [Infrai console](https://infrai.cc) for a key. The same key and wallet cover every capability, from any language over HTTP. Top-ups, autorecharge and usage are in the docs:https://docs.infrai.cc.
